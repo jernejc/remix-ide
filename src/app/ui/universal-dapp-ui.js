@@ -113,10 +113,21 @@ UniversalDAppUI.prototype.renderInstanceFromABI = function (contractABI, address
   instance.appendChild(contractActionsWrapper)
 
   // Add the fallback function
-  var fallback = self.udapp.getFallbackInterface(contractABI)
+  const fallback = self.udapp.getFallbackInterface(contractABI)
   if (fallback) {
     contractActionsWrapper.appendChild(this.getCallButton({
       funABI: fallback,
+      address: address,
+      contractAbi: contractABI,
+      contractName: contractName
+    }))
+  }
+
+  // Add the receive function
+  const receive = self.udapp.getReceiveInterface(contractABI)
+  if (receive) {
+    contractActionsWrapper.appendChild(this.getCallButton({
+      funABI: receive,
       address: address,
       contractAbi: contractABI,
       contractName: contractName
@@ -149,13 +160,12 @@ UniversalDAppUI.prototype.getCallButton = function (args) {
 
   var outputOverride = yo`<div class=${css.value}></div>` // show return value
 
+  // check if it's a special function and add a name in case it is
+  const fuctionName = args.contractName + 
+    (args.funABI.name) ? args.funABI.name : args.funABI.type === 'receive' ? '(receive)' : '(fallback)'
+
   function clickButton (valArr, inputsValues) {
-    let logMsg
-    if (!lookupOnly) {
-      logMsg = `call to ${args.contractName}.${(args.funABI.name) ? args.funABI.name : '(fallback)'}`
-    } else {
-      logMsg = `transact to ${args.contractName}.${(args.funABI.name) ? args.funABI.name : '(fallback)'}`
-    }
+    const logMsg = lookupOnly ? `transact to ${fuctionName}` : `call to ${fuctionName}`
 
     var value = inputsValues
 
@@ -251,15 +261,24 @@ UniversalDAppUI.prototype.getCallButton = function (args) {
       modalCustom.promptPassphrase('Passphrase requested', 'Personal mode is enabled. Please provide passphrase of account', '', okCb, cancelCb)
     }
 
+    const isSpecialFunction = args.funABI.type === 'fallback' || args.funABI.type === 'receive'
+
     // contractsDetails is used to resolve libraries
-    txFormat.buildData(args.contractName, args.contractAbi, {}, false, args.funABI, args.funABI.type !== 'fallback' ? value : '', (error, data) => {
+    txFormat.buildData(
+      args.contractName,
+      args.contractAbi,
+      {},
+      false,
+      args.funABI,
+      !isSpecialFunction ? value : '', // input parameters for the function to call
+      (error, data) => {
       if (!error) {
         if (!lookupOnly) {
           self.logCallback(`${logMsg} pending ... `)
         } else {
           self.logCallback(`${logMsg}`)
         }
-        if (args.funABI.type === 'fallback') data.dataHex = value
+        if (isSpecialFunction) data.dataHex = value
         self.udapp.callFunction(args.address, data, args.funABI, confirmationCb, continueCb, promptCb, (error, txResult) => {
           if (!error) {
             var isVM = self.executionContext.isVM()
