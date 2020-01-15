@@ -161,7 +161,7 @@ UniversalDAppUI.prototype.getCallButton = function (args) {
   var outputOverride = yo`<div class=${css.value}></div>` // show return value
 
   // check if it's a special function and add a name in case it is
-  const fuctionName = args.contractName + 
+  const fuctionName = args.contractName +
     (args.funABI.name) ? args.funABI.name : args.funABI.type === 'receive' ? '(receive)' : '(fallback)'
 
   function clickButton (valArr, inputsValues) {
@@ -272,40 +272,41 @@ UniversalDAppUI.prototype.getCallButton = function (args) {
       args.funABI,
       !isSpecialFunction ? value : '', // input parameters for the function to call
       (error, data) => {
-      if (!error) {
-        if (!lookupOnly) {
-          self.logCallback(`${logMsg} pending ... `)
-        } else {
-          self.logCallback(`${logMsg}`)
-        }
-        if (isSpecialFunction) data.dataHex = value
-        self.udapp.callFunction(args.address, data, args.funABI, confirmationCb, continueCb, promptCb, (error, txResult) => {
-          if (!error) {
-            var isVM = self.executionContext.isVM()
-            if (isVM) {
-              var vmError = txExecution.checkVMError(txResult)
-              if (vmError.error) {
-                self.logCallback(`${logMsg} errored: ${vmError.message} `)
-                return
-              }
-            }
-            if (lookupOnly) {
-              const decoded = decodeResponseToTreeView(self.executionContext.isVM() ? txResult.result.execResult.returnValue : ethJSUtil.toBuffer(txResult.result), args.funABI)
-              outputCb(decoded)
-            }
+        if (!error) {
+          if (!lookupOnly) {
+            self.logCallback(`${logMsg} pending ... `)
           } else {
-            self.logCallback(`${logMsg} errored: ${error} `)
+            self.logCallback(`${logMsg}`)
           }
-        })
-      } else {
-        self.logCallback(`${logMsg} errored: ${error} `)
+          if (isSpecialFunction) data.dataHex = value
+          self.udapp.callFunction(args.address, data, args.funABI, confirmationCb, continueCb, promptCb, (error, txResult) => {
+            if (!error) {
+              var isVM = self.executionContext.isVM()
+              if (isVM) {
+                var vmError = txExecution.checkVMError(txResult)
+                if (vmError.error) {
+                  self.logCallback(`${logMsg} errored: ${vmError.message} `)
+                  return
+                }
+              }
+              if (lookupOnly) {
+                const decoded = decodeResponseToTreeView(self.executionContext.isVM() ? txResult.result.execResult.returnValue : ethJSUtil.toBuffer(txResult.result), args.funABI)
+                outputCb(decoded)
+              }
+            } else {
+              self.logCallback(`${logMsg} errored: ${error} `)
+            }
+          })
+        } else {
+          self.logCallback(`${logMsg} errored: ${error} `)
+        }
+      }, (msg) => {
+        self.logCallback(msg)
+      }, (data, runTxCallback) => {
+        // called for libraries deployment
+        self.udapp.runTx(data, confirmationCb, runTxCallback)
       }
-    }, (msg) => {
-      self.logCallback(msg)
-    }, (data, runTxCallback) => {
-      // called for libraries deployment
-      self.udapp.runTx(data, confirmationCb, runTxCallback)
-    })
+    )
   }
 
   const multiParamManager = new MultiParamManager(lookupOnly, args.funABI, (valArray, inputsValues, domEl) => {
