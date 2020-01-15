@@ -113,7 +113,7 @@ class MultiParamManager {
     } else if (this.funABI.name) {
       title = this.funABI.name
     } else {
-      title = '(fallback)'
+      title = this.funABI.type === 'receive' ? '(receive)' : '(fallback)'
     }
 
     this.basicInputField = yo`<input></input>`
