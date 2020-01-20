@@ -204,12 +204,15 @@ class MultiParamManager {
 
     if (this.funABI.inputs && this.funABI.inputs.length > 0) {
       contractProperty.classList.add(css.hasArgs)
-    } else if (this.funABI.type === 'fallback' || this.funABI.type === 'receive') {
-      contractProperty.classList.add(css.hasArgs)
-      this.contractActionsContainerSingle.querySelector('i').style.visibility = 'hidden'
     } else {
       this.contractActionsContainerSingle.querySelector('i').style.visibility = 'hidden'
-      this.basicInputField.style.visibility = 'hidden'
+      if (this.funABI.type === 'fallback' || this.funABI.type === 'receive') {
+        contractProperty.classList.add(css.hasArgs)
+        this.basicInputField.setAttribute('title', `'(${this.funABI.type}')`) // probably should pass name instead
+      }
+      if (this.funABI.type !== 'fallback') {
+        this.basicInputField.style.visibility = 'hidden'
+      }
     }
 
     return contractProperty
